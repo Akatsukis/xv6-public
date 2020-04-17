@@ -103,6 +103,9 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
+#ifdef SYS_CALL_INFO
+extern int sys_info(void);
+#endif //SYS_CALL_INFO
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -126,7 +129,14 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+#ifdef SYS_CALL_INFO
+[SYS_info]    sys_info,
+#endif //SYS_CALL_INFO
 };
+
+#ifdef SYS_CALL_INFO
+static int num_of_sysc;
+#endif //SYS_CALL_INFO
 
 void
 syscall(void)
@@ -137,9 +147,20 @@ syscall(void)
   num = curproc->tf->eax;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     curproc->tf->eax = syscalls[num]();
+#ifdef SYS_CALL_INFO
+    num_of_sysc++;
+#endif //SYS_CALL_INFO
   } else {
     cprintf("%d %s: unknown sys call %d\n",
             curproc->pid, curproc->name, num);
     curproc->tf->eax = -1;
   }
 }
+
+#ifdef SYS_CALL_INFO
+int
+get_num_sysc(void)
+{
+  return num_of_sysc;
+}
+#endif //SYS_CALL_INFO

@@ -442,3 +442,25 @@ sys_pipe(void)
   fd[1] = fd1;
   return 0;
 }
+
+#ifdef SYS_CALL_INFO
+extern int get_num_proc();
+extern int get_num_sysc();
+
+int
+sys_info(void)
+{
+  int type;
+  if(argint(0, &type) < 0 || type < 1 || type > 3)
+    return -1;
+  int ret = 0;
+  if(type == 1) {
+    ret = get_num_proc();
+  } else if(type == 2) {
+    ret = get_num_sysc();
+  } else {
+    
+  }
+  return ret;
+}
+#endif //SYS_CALL_INFO

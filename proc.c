@@ -532,3 +532,19 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+#ifdef SYS_CALL_INFO
+int
+get_num_proc(void)
+{
+  int ret = 0;
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state == UNUSED)
+      continue;
+    else
+      ret++;
+  }
+  return ret;
+}
+#endif //SYS_CALL_INFO
