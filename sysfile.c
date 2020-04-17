@@ -446,6 +446,7 @@ sys_pipe(void)
 #ifdef SYS_CALL_INFO
 extern int get_num_proc();
 extern int get_num_sysc();
+extern int get_num_page();
 
 int
 sys_info(void)
@@ -459,7 +460,7 @@ sys_info(void)
   } else if(type == 2) {
     ret = get_num_sysc();
   } else {
-    
+    ret = get_num_page();
   }
   return ret;
 }

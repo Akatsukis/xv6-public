@@ -547,4 +547,16 @@ get_num_proc(void)
   }
   return ret;
 }
+
+int
+get_num_page(void)
+{
+  int ret = 0;
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state == RUNNING)
+      ret = p->sz/PGSIZE;
+  }
+  return ret;
+}
 #endif //SYS_CALL_INFO
