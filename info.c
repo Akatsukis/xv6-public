@@ -11,7 +11,7 @@ main(int argc, char *argv[])
            "1: A count of the processes in the system;\n"
            "2: A count of the total number of system calls that the current "
            "process has made so far;\n"
-           "3:The number of memory pages the current process is using.\n");
+           "3: The number of memory pages the current process is using.\n");
     exit();
   } else {
     int type = atoi(argv[1]);
@@ -21,7 +21,7 @@ main(int argc, char *argv[])
              "1: A count of the processes in the system;\n"
              "2: A count of the total number of system calls that the current "
              "process has made so far;\n"
-             "3:The number of memory pages the current process is using.\n");
+             "3: The number of memory pages the current process is using.\n");
       exit();
     }
     printf(1, "%d\n", info(atoi(argv[1])));
