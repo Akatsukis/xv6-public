@@ -442,3 +442,24 @@ sys_pipe(void)
   fd[1] = fd1;
   return 0;
 }
+
+#if defined(LOTTERY) || defined(STRIDE)
+extern int set_tickets(int);
+extern int get_ticks();
+
+int
+sys_stickets(void)
+{
+  int tickets;
+  if(argint(0, &tickets) || tickets < 0) 
+    return -1;
+  set_tickets(tickets);
+  return 0;
+}
+
+int
+sys_gticks(void) 
+{
+  return get_ticks();
+}
+#endif

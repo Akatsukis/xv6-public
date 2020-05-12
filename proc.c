@@ -88,6 +88,10 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+#if defined(LOTTERY) || defined(STRIDE)
+  p->tickets = 1000;
+  p->ticks = 0;
+#endif
 
   release(&ptable.lock);
 
@@ -111,6 +115,7 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+
 
   return p;
 }
@@ -149,6 +154,10 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
+#if defined(LOTTERY) || defined(STRIDE)
+  p->tickets = 1000;
+  p->ticks = 0;
+#endif
 
   release(&ptable.lock);
 }
@@ -311,6 +320,16 @@ wait(void)
   }
 }
 
+#ifdef LOTTERY
+unsigned long randstate = 1;
+unsigned int 
+rand(void)
+{
+  randstate = randstate * 1664525 + 1013904223;
+  return randstate;
+}
+#endif
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -332,10 +351,30 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+#if defined(LOTTERY) || defined(STRIDE)
+    int total = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
-
+      total += p->tickets;
+    }
+    if(total == 0) {
+      release(&ptable.lock);
+      continue;
+    }
+    int random = rand()%total;
+    /*cprintf("random=%d, total=%d\n", random, total);*/
+    int sum = 0;
+#endif
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE)
+        continue;
+#if defined(LOTTERY) || defined(STRIDE)
+      sum += p->tickets;
+      if(sum <= random)
+        continue;
+      /*cprintf("Running %d\n", p->tickets);*/
+#endif
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
@@ -349,6 +388,10 @@ scheduler(void)
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
+#if defined(LOTTERY) || defined(STRIDE)
+      p->ticks++;
+      break;
+#endif
     }
     release(&ptable.lock);
 
@@ -532,3 +575,28 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+#if defined(LOTTERY) || defined(STRIDE)
+int 
+set_tickets(int tickets)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == RUNNING) {
+      p->tickets = tickets;
+    }
+  }
+  return 0;
+}
+int
+get_ticks() 
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == UNUSED)
+     continue;
+    cprintf("%s %d\n", p->name, p->ticks);
+  } 
+  return 0;
+}
+#endif
