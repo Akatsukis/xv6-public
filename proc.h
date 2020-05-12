@@ -50,8 +50,8 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 #if defined(LOTTERY) || defined(STRIDE)
-  unsigned tickets;
-  unsigned ticks;
+  int tickets;
+  int ticks;
 #endif
 };
 
