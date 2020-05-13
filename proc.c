@@ -65,6 +65,10 @@ myproc(void) {
   return p;
 }
 
+#ifdef STRIDE
+const int stride1 = 1<<20;
+#endif
+
 //PAGEBREAK: 32
 // Look in the process table for an UNUSED proc.
 // If found, change state to EMBRYO and initialize
@@ -91,6 +95,10 @@ found:
 #if defined(LOTTERY) || defined(STRIDE)
   p->tickets = 1000;
   p->ticks = 0;
+#endif
+#ifdef STRIDE
+  p->stride = stride1/p->tickets;
+  p->pass = p->stride;
 #endif
 
   release(&ptable.lock);
@@ -157,6 +165,10 @@ userinit(void)
 #if defined(LOTTERY) || defined(STRIDE)
   p->tickets = 1000;
   p->ticks = 0;
+#endif
+#ifdef STRIDE
+  p->stride = stride1/p->tickets;
+  p->pass = p->stride;
 #endif
 
   release(&ptable.lock);
@@ -351,7 +363,7 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-#if defined(LOTTERY) || defined(STRIDE)
+#ifdef LOTTERY
     int total = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
@@ -363,17 +375,31 @@ scheduler(void)
       continue;
     }
     int random = rand()%total;
-    /*cprintf("random=%d, total=%d\n", random, total);*/
     int sum = 0;
+#endif
+#ifdef STRIDE
+    int min_pass = __INT_MAX__;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE)
+        continue;
+      min_pass = (min_pass<p->pass)?min_pass:p->pass;
+    }
+    if(min_pass == __INT_MAX__) {
+      release(&ptable.lock);
+      continue;
+    }
 #endif
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
-#if defined(LOTTERY) || defined(STRIDE)
+#ifdef LOTTERY
       sum += p->tickets;
       if(sum <= random)
         continue;
-      /*cprintf("Running %d\n", p->tickets);*/
+#endif
+#ifdef STRIDE
+      if(p->pass != min_pass)
+        continue;
 #endif
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -390,6 +416,9 @@ scheduler(void)
       c->proc = 0;
 #if defined(LOTTERY) || defined(STRIDE)
       p->ticks++;
+#ifdef STRIDE
+      p->pass += p->stride;
+#endif
       break;
 #endif
     }
@@ -584,6 +613,9 @@ set_tickets(int tickets)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == RUNNING) {
       p->tickets = tickets;
+#ifdef STRIDE
+      p->stride = stride1/p->tickets;
+#endif
     }
   }
   return 0;
@@ -595,7 +627,12 @@ get_ticks()
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
      continue;
-    cprintf("%s %d\n", p->name, p->ticks);
+#ifdef LOTTERY
+    cprintf("%s\tticks=%d\ttickets=%d\n", p->name, p->ticks, p->tickets);
+#endif
+#ifdef STRIDE
+    cprintf("%s\tticks=%d\ttickets=%d\tstride=%d\n", p->name, p->ticks, p->tickets, p->stride);
+#endif
   } 
   return 0;
 }

@@ -53,6 +53,10 @@ struct proc {
   int tickets;
   int ticks;
 #endif
+#ifdef STRIDE
+  int stride;
+  int pass;
+#endif
 };
 
 // Process memory is laid out contiguously, low addresses first:
