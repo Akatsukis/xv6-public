@@ -334,11 +334,12 @@ wait(void)
 
 #ifdef LOTTERY
 unsigned long randstate = 1;
-unsigned int 
+int 
 rand(void)
 {
   randstate = randstate * 1664525 + 1013904223;
-  return randstate;
+  int ret = randstate;
+  return ret >= 0 ? ret : -ret;
 }
 #endif
 
