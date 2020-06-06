@@ -3,6 +3,11 @@
 #include "fcntl.h"
 #include "user.h"
 #include "x86.h"
+/*#include "proc.h"*/
+/*#include "param.h"*/
+/*#include "syscall.h"*/
+/*#include "traps.h"*/
+/*#include "fs.h"*/
 
 char*
 strcpy(char *s, const char *t)
@@ -104,3 +109,47 @@ memmove(void *vdst, const void *vsrc, int n)
     *dst++ = *src++;
   return vdst;
 }
+
+void 
+lock_init(lock_t *lk)
+{
+  *lk = 0;
+}
+
+void
+lock_acquire(lock_t *lk)
+{
+  while(xchg(lk, 1) != 0)
+    ;
+}
+
+void
+lock_release(lock_t *lk)
+{
+  *lk = 0;
+}
+
+#define USTACKSIZE 4096
+
+int
+thread_create(void *(*start_routine)(void*), void *arg)
+{
+  char *stack;
+  if((stack = malloc(USTACKSIZE)) == 0) {
+    return -1;
+  }
+  int ret = clone(stack, USTACKSIZE);
+  if(ret == 0) {
+    (*start_routine)(arg);
+    free(stack);
+    /*printf(1, "thread done\n");*/
+    exit();
+  } else if(ret != -1) {
+    /*printf(1, "thread return\n");*/
+    return ret;
+  } else {
+    printf(1, "clone error\n");
+    return -1;
+  }
+}
+

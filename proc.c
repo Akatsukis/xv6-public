@@ -289,7 +289,8 @@ wait(void)
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
-        freevm(p->pgdir);
+        if(p->pgdir != curproc->pgdir) 
+            freevm(p->pgdir);
         p->pid = 0;
         p->parent = 0;
         p->name[0] = 0;
@@ -532,3 +533,53 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+#define USTACKSIZE 4096
+
+int
+clone(void *stack, int size)
+{
+  if(stack == 0)
+    panic("clone error: stack cannot be NULL\n");
+  int i, pid;
+  struct proc *np;
+  struct proc *curproc = myproc();
+
+  // Allocate process.
+  if((np = allocproc()) == 0){
+    return -1;
+  }
+
+  np->pgdir = curproc->pgdir;
+  np->sz = curproc->sz;
+  np->parent = curproc;
+  *np->tf = *curproc->tf;
+
+  void *st = (void*)curproc->tf->ebp + 16;
+  void *ed = (void*)curproc->tf->esp;
+  uint len = (uint)(st - ed);
+  np->tf->esp = (uint)(stack - len);
+  np->tf->ebp = (uint)(stack - 16);
+  memmove(stack - len, ed, len);
+
+  // Clear %eax so that clone returns 0 in the child.
+  np->tf->eax = 0;
+
+  for(i = 0; i < NOFILE; i++)
+    if(curproc->ofile[i])
+      np->ofile[i] = filedup(curproc->ofile[i]);
+  np->cwd = idup(curproc->cwd);
+
+  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+
+  pid = np->pid;
+
+  acquire(&ptable.lock);
+
+  np->state = RUNNABLE;
+
+  release(&ptable.lock);
+
+  return pid;
+}
+
